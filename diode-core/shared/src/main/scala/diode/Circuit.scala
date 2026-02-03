@@ -415,10 +415,10 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
           // no-op
           false
         case ActionResult.ModelUpdate(newModel) =>
-          update(newModel.asInstanceOf[M])
+          update(newModel)
           false
         case ActionResult.ModelUpdateSilent(newModel) =>
-          update(newModel.asInstanceOf[M])
+          update(newModel)
           true
         case ActionResult.EffectOnly(effects) =>
           // run effects
@@ -429,7 +429,7 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
             }(effects.ec)
           true
         case ActionResult.ModelUpdateEffect(newModel, effects) =>
-          update(newModel.asInstanceOf[M])
+          update(newModel)
           // run effects
           effects
             .run(a => dispatch(a))
@@ -438,7 +438,7 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
             }(effects.ec)
           false
         case ActionResult.ModelUpdateSilentEffect(newModel, effects) =>
-          update(newModel.asInstanceOf[M])
+          update(newModel)
           // run effects
           effects
             .run(a => dispatch(a))

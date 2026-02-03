@@ -3,7 +3,7 @@ package diode.data
 import java.util.Date
 
 import diode.Monad
-import diode.util._
+import diode.util.*
 
 import scala.util.{Failure, Success, Try}
 

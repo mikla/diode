@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import diode.Effect
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 /**
   * Define a policy for retrying
