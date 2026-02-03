@@ -9,7 +9,7 @@ ThisBuild / scalafmtOnCompile := true
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 ThisBuild / scalaVersion       := "2.13.17"
-ThisBuild / crossScalaVersions := Seq("2.13.17", "3.7.4")
+ThisBuild / crossScalaVersions := Seq("2.13.17", "3.8.1")
 
 val commonSettings = Seq(
   scalacOptions := Seq(
@@ -32,7 +32,7 @@ val commonSettings = Seq(
   }.value,
   scalacOptions ++= scalaVerDependentSeq {
     case (2, 13) => Seq("-Werror")
-    // case (3, _)  => "-Xfatal-warnings" // there are a lot of scala3 related warnings now
+    case (3, _)  => Seq("-Xfatal-warnings")
   }.value,
   Compile / scalacOptions -= scalaVerDependent {
     case (2, _) => "-Ywarn-value-discard"
