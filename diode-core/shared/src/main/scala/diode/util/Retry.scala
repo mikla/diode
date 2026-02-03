@@ -41,7 +41,7 @@ object Retry {
   case object None extends RetryPolicy {
     override def canRetry(reason: Throwable) = false
 
-    override def retry[T <: AnyRef](reason: Throwable, effectProvider: RetryPolicy => Effect) =
+    override def retry[T <: AnyRef](reason: Throwable, effectProvider: RetryPolicy => Effect): Left[Throwable, Nothing] =
       Left(reason)
   }
 
@@ -56,10 +56,12 @@ object Retry {
     *   A filter to check if the cause of failure should prevent retrying.
     */
   case class Immediate(retriesLeft: Int, filter: Throwable => Boolean = always) extends RetryPolicy {
-    override def canRetry(reason: Throwable) =
+    override def canRetry(reason: Throwable): Boolean =
       retriesLeft > 0 && filter(reason)
 
-    override def retry[T <: AnyRef](reason: Throwable, effectProvider: RetryPolicy => Effect) = {
+    override def retry[T <: AnyRef](reason: Throwable,
+                                    effectProvider: RetryPolicy => Effect
+    ): Either[Throwable, (RetryPolicy, Effect)] = {
       if (canRetry(reason)) {
         val nextPolicy = Immediate(retriesLeft - 1, filter)
         Right((nextPolicy, effectProvider(nextPolicy)))
@@ -88,10 +90,12 @@ object Retry {
       filter: Throwable => Boolean = always
   )(implicit runner: RunAfter, ec: ExecutionContext)
       extends RetryPolicy {
-    override def canRetry(reason: Throwable) =
+    override def canRetry(reason: Throwable): Boolean =
       retriesLeft > 0 && filter(reason)
 
-    override def retry[T <: AnyRef](reason: Throwable, effectProvider: RetryPolicy => Effect) = {
+    override def retry[T <: AnyRef](reason: Throwable,
+                                    effectProvider: RetryPolicy => Effect
+    ): Either[Throwable, (RetryPolicy, Effect)] = {
       if (canRetry(reason)) {
         // calculate next delay time
         val nextDelay  = (delay.toUnit(TimeUnit.MILLISECONDS) * exp).millis
@@ -103,12 +107,12 @@ object Retry {
     }
   }
 
-  def apply(retries: Int) =
+  def apply(retries: Int): Immediate =
     Immediate(retries)
 
-  def apply(retries: Int, delay: FiniteDuration)(implicit runner: RunAfter, ec: ExecutionContext) =
+  def apply(retries: Int, delay: FiniteDuration)(implicit runner: RunAfter, ec: ExecutionContext): Backoff =
     Backoff(retries, delay)
 
-  def apply(retries: Int, delay: FiniteDuration, exp: Double)(implicit runner: RunAfter, ec: ExecutionContext) =
+  def apply(retries: Int, delay: FiniteDuration, exp: Double)(implicit runner: RunAfter, ec: ExecutionContext): Backoff =
     Backoff(retries, delay, exp)
 }

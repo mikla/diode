@@ -6,7 +6,7 @@ object ModelRWTests extends TestSuite {
 
   import ModelRWTestsModel._
 
-  def tests = TestSuite {
+  def tests = Tests {
     "eq" - {
       var m  = ComplexModel(A(999, "string"), B(Seq(1.0f, 2.0f, 3.0f), 3.0f), C(42, "c", Some(A(998, "A"))))
       val mr = new RootModelR(m)
@@ -97,7 +97,7 @@ object ModelRWTests extends TestSuite {
         // normal zoomed values change reference on each call
         assert(rv1 ne r1.value)
         val rm1: ModelR[ModelOpt, Option[String]] = cr.map((c: C) => c.s)
-        val rmi1 = mr.zoomMap(_.c)(_.i)
+        val rmi1                                  = mr.zoomMap(_.c)(_.i)
         // mapped values maintain reference
         assert(rm1.value eq rm1.value)
         assert(rmi1.value eq rmi1.value)
@@ -114,11 +114,11 @@ object ModelRWTests extends TestSuite {
         assert(rmv1 ne rm1.value)
       }
       "flatMap" - {
-        var m   = ModelOpt(1.0f, Some(C(4242, "some", Some(A(66, "deep")))))
-        val mr  = new RootModelR(m)
-        val cr  = mr.zoomFlatMap(_.c)(_.o)
+        var m                                     = ModelOpt(1.0f, Some(C(4242, "some", Some(A(66, "deep")))))
+        val mr                                    = new RootModelR(m)
+        val cr                                    = mr.zoomFlatMap(_.c)(_.o)
         val crs: ModelR[ModelOpt, Option[String]] = cr.map((a: A) => a.s)
-        val v1  = crs.value
+        val v1                                    = crs.value
         println(v1)
         assert(v1 eq crs.value)
         m = m.copy(c = m.c.map(c => c.copy(o = c.o.map(_.copy(i = 0)))))

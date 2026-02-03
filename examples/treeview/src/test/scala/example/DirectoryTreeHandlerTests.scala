@@ -5,7 +5,7 @@ import diode.RootModelRW
 import utest._
 
 object DirectoryTreeHandlerTests extends TestSuite {
-  def tests = TestSuite {
+  def tests = Tests {
     // test data
     val dir = Directory(
       "/",

@@ -11,7 +11,7 @@ import diode._
   *   Function to create an update action for the value this reference points to
   */
 class RefTo[V](val target: ModelRO[V], val updated: V => Action) {
-  def apply() = target()
+  def apply(): V = target()
 }
 
 object RefTo {
@@ -57,6 +57,6 @@ object RefTo {
   @inline
   def stream[K, V, P](key: K, streamTarget: ModelRO[P])(
       updated: (K, V) => Action
-  )(implicit ev: P <:< PotStream[K, V], feq: FastEq[_ >: V]): RefTo[V] =
+  )(implicit ev: P <:< PotStream[K, V], feq: FastEq[? >: V]): RefTo[V] =
     new RefTo[V](streamTarget.zoom(_.apply(key)), updated(key, _: V))
 }

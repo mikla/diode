@@ -28,11 +28,11 @@ trait PotAction[A, P <: PotAction[A, P]] extends AsyncAction[A, P] {
     case (PotState.PotPending, _)             => next(potResult.pending())
     case (PotState.PotFailed, Failure(ex))    => next(potResult.fail(ex))
     case (PotState.PotReady, Success(result)) => next(potResult.ready(result))
-    case _ =>
+    case _                                    =>
       throw new IllegalStateException(s"PotAction is trying to enter an invalid state ($newState)")
   }
 
-  override def result = potResult.state match {
+  override def result: Try[A] = potResult.state match {
     case PotState.PotEmpty | PotState.PotPending =>
       Failure(new AsyncAction.PendingException)
     case PotState.PotFailed =>
@@ -67,7 +67,7 @@ trait PotActionRetriable[A, P <: PotActionRetriable[A, P]] extends PotAction[A, 
     case (PotState.PotPending, _)             => next(potResult.pending(), newRetryPolicy)
     case (PotState.PotFailed, Failure(ex))    => next(potResult.fail(ex), newRetryPolicy)
     case (PotState.PotReady, Success(result)) => next(potResult.ready(result), newRetryPolicy)
-    case _ =>
+    case _                                    =>
       throw new IllegalStateException(s"PotAction is trying to enter an invalid state ($newState)")
   }
 }
@@ -91,30 +91,31 @@ object PotAction {
   def handler[A, M, P <: PotAction[A, P]](progressInterval: FiniteDuration)(implicit
       runner: RunAfter,
       ec: ExecutionContext
-  ) = { (action: PotAction[A, P], handler: ActionHandler[M, Pot[A]], updateEffect: Effect) =>
-    {
-      import PotState._
-      import handler._
-      action.state match {
-        case PotEmpty =>
-          if (progressInterval > Duration.Zero)
-            updated(value.pending(), updateEffect + Effect.action(action.pending).after(progressInterval))
-          else
-            updated(value.pending(), updateEffect)
-        case PotPending =>
-          if (value.isPending && progressInterval > Duration.Zero)
-            updated(value.pending(), Effect.action(action.pending).after(progressInterval))
-          else
-            noChange
-        case PotUnavailable =>
-          updated(value.unavailable())
-        case PotReady =>
-          updated(action.potResult)
-        case PotFailed =>
-          val ex = action.result.failed.get
-          updated(value.fail(ex))
+  ): (PotAction[A, P], ActionHandler[M, Pot[A]], Effect) => ActionResult[M] = {
+    (action: PotAction[A, P], handler: ActionHandler[M, Pot[A]], updateEffect: Effect) =>
+      {
+        import PotState._
+        import handler._
+        action.state match {
+          case PotEmpty =>
+            if (progressInterval > Duration.Zero)
+              updated(value.pending(), updateEffect + Effect.action(action.pending).after(progressInterval))
+            else
+              updated(value.pending(), updateEffect)
+          case PotPending =>
+            if (value.isPending && progressInterval > Duration.Zero)
+              updated(value.pending(), Effect.action(action.pending).after(progressInterval))
+            else
+              noChange
+          case PotUnavailable =>
+            updated(value.unavailable())
+          case PotReady =>
+            updated(action.potResult)
+          case PotFailed =>
+            val ex = action.result.failed.get
+            updated(value.fail(ex))
+        }
       }
-    }
   }
 }
 
@@ -137,40 +138,41 @@ object PotActionRetriable {
   def handler[A, M, P <: PotActionRetriable[A, P]](progressInterval: FiniteDuration)(implicit
       runner: RunAfter,
       ec: ExecutionContext
-  ) = { (action: PotActionRetriable[A, P], handler: ActionHandler[M, Pot[A]], updateEffect: RetryPolicy => Effect) =>
-    {
-      import PotState._
-      import handler._
-      action.state match {
-        case PotEmpty =>
-          if (progressInterval > Duration.Zero)
-            updated(
-              value.pending(),
-              updateEffect(action.retryPolicy) + Effect.action(action.pending).after(progressInterval)
-            )
-          else
-            updated(value.pending(), updateEffect(action.retryPolicy))
+  ): (PotActionRetriable[A, P], ActionHandler[M, Pot[A]], RetryPolicy => Effect) => ActionResult[M] = {
+    (action: PotActionRetriable[A, P], handler: ActionHandler[M, Pot[A]], updateEffect: RetryPolicy => Effect) =>
+      {
+        import PotState._
+        import handler._
+        action.state match {
+          case PotEmpty =>
+            if (progressInterval > Duration.Zero)
+              updated(
+                value.pending(),
+                updateEffect(action.retryPolicy) + Effect.action(action.pending).after(progressInterval)
+              )
+            else
+              updated(value.pending(), updateEffect(action.retryPolicy))
 
-        case PotPending =>
-          if (value.isPending && progressInterval > Duration.Zero)
-            updated(value.pending(), Effect.action(action.pending).after(progressInterval))
-          else
-            noChange
-        case PotUnavailable =>
-          updated(value.unavailable())
-        case PotReady =>
-          updated(action.potResult)
-        case PotFailed =>
-          action.retryPolicy.retry(
-            action.potResult.exceptionOption.getOrElse(new IllegalStateException("Pot is not in a failed state")),
-            updateEffect
-          ) match {
-            case Right((_, retryEffect)) =>
-              effectOnly(retryEffect)
-            case Left(ex) =>
-              updated(value.fail(ex))
-          }
+          case PotPending =>
+            if (value.isPending && progressInterval > Duration.Zero)
+              updated(value.pending(), Effect.action(action.pending).after(progressInterval))
+            else
+              noChange
+          case PotUnavailable =>
+            updated(value.unavailable())
+          case PotReady =>
+            updated(action.potResult)
+          case PotFailed =>
+            action.retryPolicy.retry(
+              action.potResult.exceptionOption.getOrElse(new IllegalStateException("Pot is not in a failed state")),
+              updateEffect
+            ) match {
+              case Right((_, retryEffect)) =>
+                effectOnly(retryEffect)
+              case Left(ex) =>
+                updated(value.fail(ex))
+            }
+        }
       }
-    }
   }
 }

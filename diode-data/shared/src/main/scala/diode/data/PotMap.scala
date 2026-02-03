@@ -41,10 +41,10 @@ class PotMap[K, V](
     runAfterImpl.runAfter(0)(fetcher.fetch(keys))
   }
 
-  override def clear =
+  override def clear: PotMap[K, V] =
     new PotMap(fetcher, Map.empty[K, Pot[V]])
 
-  override def get(key: K) = {
+  override def get(key: K): Pot[V] = {
     elems.get(key) match {
       case Some(elem) if elem.state == PotState.PotEmpty =>
         refresh(key)
@@ -63,12 +63,12 @@ class PotMap[K, V](
 
   def +(kv: (K, Pot[V])): PotMap[K, V] = updated(kv._1, kv._2)
 
-  def ++(xs: Iterable[(K, Pot[V])]) = updated(xs)
+  def ++(xs: Iterable[(K, Pot[V])]): PotMap[K, V] = updated(xs)
 
-  def -(key: K) = remove(key)
+  def -(key: K): PotMap[K, V] = remove(key)
 
   def get(keys: Iterable[K]): Map[K, Pot[V]] = {
-    var toFetch = List.empty[K]
+    var toFetch                = List.empty[K]
     val values: Map[K, Pot[V]] =
       keys.map { key =>
         elems.get(key) match {

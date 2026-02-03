@@ -28,7 +28,7 @@ object CircuitTests extends TestSuite {
 
   class AppCircuit(implicit val ec: ExecutionContext) extends Circuit[Model] {
     import diode.ActionResult._
-    override def initialModel = Model("Testing", Data(42, true))
+    override def initialModel                             = Model("Testing", Data(42, true))
     override protected def actionHandler: HandlerFunction =
       (model, action) =>
         ({
@@ -54,7 +54,7 @@ object CircuitTests extends TestSuite {
     override def handleError(msg: String): Unit               = lastError = msg
   }
 
-  def tests = TestSuite {
+  def tests = Tests {
     implicit val ec = ExecutionContext.global
     def circuit     = new AppCircuit
 
@@ -120,9 +120,9 @@ object CircuitTests extends TestSuite {
     }
     "Listener" - {
       "Normal" - {
-        val c             = circuit
-        var state: Model  = null
-        var callbackCount = 0
+        val c                                       = circuit
+        var state: Model                            = null
+        var callbackCount                           = 0
         def listener(cursor: ModelRO[String]): Unit = {
           state = c.model
           callbackCount += 1
@@ -140,10 +140,10 @@ object CircuitTests extends TestSuite {
         assert(state.s == "Listen4")
       }
       "Cursor" - {
-        val c             = circuit
-        var state: Model  = null
-        var state2: Model = null
-        var callbackCount = 0
+        val c                                      = circuit
+        var state: Model                           = null
+        var state2: Model                          = null
+        var callbackCount                          = 0
         def listener1(cursor: ModelRO[Data]): Unit = {
           state = c.model
           callbackCount += 1
@@ -166,9 +166,9 @@ object CircuitTests extends TestSuite {
         assert(callbackCount == 2)
       }
       "Silent" - {
-        val c             = circuit
-        var state: Model  = null
-        var callbackCount = 0
+        val c                                       = circuit
+        var state: Model                            = null
+        var callbackCount                           = 0
         def listener(cursor: ModelRO[String]): Unit = {
           state = c.model
           callbackCount += 1
@@ -293,7 +293,7 @@ object CircuitTests extends TestSuite {
 
         val zoomS        = c.zoom(_.s)
         val zoomDataBool = c.zoom(_.data.b)
-        val zipped       = zoomS zip zoomDataBool
+        val zipped       = zoomS.zip(zoomDataBool)
 
         def listener(cursor: ModelRO[(String, Boolean)]): Unit = {
           state1 = cursor()
@@ -391,7 +391,7 @@ object CircuitTests extends TestSuite {
       "LogState" - {
         val c   = circuit
         var log = "log"
-        val p = new ActionProcessor[Model] {
+        val p   = new ActionProcessor[Model] {
           override def process(dispatcher: Dispatcher,
                                action: Any,
                                next: Any => ActionResult[Model],
@@ -443,7 +443,7 @@ object CircuitTests extends TestSuite {
     "FoldHandler" - {
       val c         = circuit
       val origModel = c.model
-      val h1 = new ActionHandler[Model, Int](c.zoomRW(_.data.i)((m, t) => m.copy(data = m.data.copy(i = t)))) {
+      val h1        = new ActionHandler[Model, Int](c.zoomRW(_.data.i)((m, t) => m.copy(data = m.data.copy(i = t)))) {
         override protected def handle = {
           case SetS(newS) =>
             updated(value + 1)

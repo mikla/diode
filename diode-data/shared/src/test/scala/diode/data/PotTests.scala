@@ -1,9 +1,9 @@
 package diode.data
 
-import utest._
+import utest.*
 
 object PotTests extends TestSuite {
-  def tests = TestSuite {
+  def tests = Tests {
     "Pot" - {
       "mapVariants" - {
         val p = Pot.empty[String]

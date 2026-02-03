@@ -27,7 +27,7 @@ abstract class PersistState[M <: AnyRef, P] extends ActionProcessor[M] {
   // internal action dispatched once loading is completed
   private case class Loaded(newModel: M) extends Action
 
-  override def process(dispatch: Dispatcher, action: Any, next: Any => ActionResult[M], currentModel: M) = {
+  override def process(dispatch: Dispatcher, action: Any, next: Any => ActionResult[M], currentModel: M): ActionResult[M] = {
     action match {
       case Save(id) =>
         // pickle and save

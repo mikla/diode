@@ -59,7 +59,7 @@ private[diode] object GenLens {
     field.asTerm match {
       case Inlined(_, _, Block(List(DefDef(_, _, _, Some(fieldChain))), _)) =>
         val setExpr = generateSetExpression(fieldChain)
-        '{ $zoomer.zoomRW($field)($setExpr)($feq) }
+        '{ $zoomer.zoomRW($field)($setExpr)(using $feq) }
 
       case _ => reportIllegalFieldReference()
     }

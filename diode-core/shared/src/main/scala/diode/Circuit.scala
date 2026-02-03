@@ -23,7 +23,7 @@ trait ActionType[-A]
 trait Dispatcher {
   def dispatch[A: ActionType](action: A): Unit
 
-  def apply[A: ActionType](action: A) = dispatch(action)
+  def apply[A: ActionType](action: A): Unit = dispatch(action)
 }
 
 /**
@@ -142,13 +142,13 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
   private var isDispatching = false
   private var dispatchQueue = Queue.empty[Any]
   private var listenerId    = 0
-  private var listeners     = Map.empty[Int, Subscription[_]]
+  private var listeners     = Map.empty[Int, Subscription[?]]
   private var processors    = List.empty[ActionProcessor[M]]
   private var processChain  = buildProcessChain
 
   private def buildProcessChain = {
     // chain processing functions
-    processors.reverse.foldLeft(process _)((next, processor) =>
+    processors.reverse.foldLeft(process(_))((next, processor) =>
       (action: Any) => processor.process(this, action, next, model)
     )
   }
@@ -161,13 +161,13 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
     * @return
     *   A `ModelR[T]` giving you read-only access to part of the model
     */
-  def zoom[T](get: M => T)(implicit feq: FastEq[_ >: T]): ModelR[M, T] =
+  def zoom[T](get: M => T)(implicit feq: FastEq[? >: T]): ModelR[M, T] =
     modelRW.zoom[T](get)
 
-  def zoomMap[F[_], A, B](fa: M => F[A])(f: A => B)(implicit monad: Monad[F], feq: FastEq[_ >: B]): ModelR[M, F[B]] =
+  def zoomMap[F[_], A, B](fa: M => F[A])(f: A => B)(implicit monad: Monad[F], feq: FastEq[? >: B]): ModelR[M, F[B]] =
     modelRW.zoomMap(fa)(f)
 
-  def zoomFlatMap[F[_], A, B](fa: M => F[A])(f: A => F[B])(implicit monad: Monad[F], feq: FastEq[_ >: B]): ModelR[M, F[B]] =
+  def zoomFlatMap[F[_], A, B](fa: M => F[A])(f: A => F[B])(implicit monad: Monad[F], feq: FastEq[? >: B]): ModelR[M, F[B]] =
     modelRW.zoomFlatMap(fa)(f)
 
   /**
@@ -180,16 +180,16 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
     * @return
     *   A `ModelRW[T]` giving you read/update access to part of the model
     */
-  def zoomRW[T](get: M => T)(set: (M, T) => M)(implicit feq: FastEq[_ >: T]): ModelRW[M, T] = modelRW.zoomRW(get)(set)
+  def zoomRW[T](get: M => T)(set: (M, T) => M)(implicit feq: FastEq[? >: T]): ModelRW[M, T] = modelRW.zoomRW(get)(set)
 
   def zoomMapRW[F[_], A, B](fa: M => F[A])(f: A => B)(
       set: (M, F[B]) => M
-  )(implicit monad: Monad[F], feq: FastEq[_ >: B]): ModelRW[M, F[B]] =
+  )(implicit monad: Monad[F], feq: FastEq[? >: B]): ModelRW[M, F[B]] =
     modelRW.zoomMapRW(fa)(f)(set)
 
   def zoomFlatMapRW[F[_], A, B](fa: M => F[A])(f: A => F[B])(
       set: (M, F[B]) => M
-  )(implicit monad: Monad[F], feq: FastEq[_ >: B]): ModelRW[M, F[B]] =
+  )(implicit monad: Monad[F], feq: FastEq[? >: B]): ModelRW[M, F[B]] =
     modelRW.zoomFlatMapRW(fa)(f)(set)
 
   /**
@@ -309,7 +309,7 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
     }
 
   @deprecated("Use composeHandlers or foldHandlers instead", "0.5.1")
-  def combineHandlers(handlers: HandlerFunction*): HandlerFunction = composeHandlers(handlers: _*)
+  def combineHandlers(handlers: HandlerFunction*): HandlerFunction = composeHandlers(handlers*)
 
   /**
     * Folds multiple handlers into a single function so that each handler is called in turn and an updated model is passed on
@@ -391,10 +391,11 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
           isDispatching = false
         }
         // if there is an item in the queue, dispatch it
+        import AnyAction._
         dispatchQueue.dequeueOption foreach {
           case (nextAction, queue) =>
             dispatchQueue = queue
-            dispatch(nextAction)(using null)
+            dispatch(nextAction)
         }
       } else {
         // add to the queue
@@ -414,10 +415,10 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
           // no-op
           false
         case ActionResult.ModelUpdate(newModel) =>
-          update(newModel)
+          update(newModel.asInstanceOf[M])
           false
         case ActionResult.ModelUpdateSilent(newModel) =>
-          update(newModel)
+          update(newModel.asInstanceOf[M])
           true
         case ActionResult.EffectOnly(effects) =>
           // run effects
@@ -428,7 +429,7 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
             }(effects.ec)
           true
         case ActionResult.ModelUpdateEffect(newModel, effects) =>
-          update(newModel)
+          update(newModel.asInstanceOf[M])
           // run effects
           effects
             .run(a => dispatch(a))
@@ -437,7 +438,7 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
             }(effects.ec)
           false
         case ActionResult.ModelUpdateSilentEffect(newModel, effects) =>
-          update(newModel)
+          update(newModel.asInstanceOf[M])
           // run effects
           effects
             .run(a => dispatch(a))

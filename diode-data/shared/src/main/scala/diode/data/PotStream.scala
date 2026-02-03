@@ -12,9 +12,9 @@ final case class StreamValue[K, V](key: K,
 ) {
   def apply() = value
 
-  def prev = stream.get(prevKey)
+  def prev: Option[StreamValue[K, V]] = stream.get(prevKey)
 
-  def next = stream.get(nextKey)
+  def next: Option[StreamValue[K, V]] = stream.get(nextKey)
 }
 
 class PotStream[K, V](
@@ -100,7 +100,7 @@ class PotStream[K, V](
       }
 
       val reversedKvs = kvs.reverse
-      val newValues =
+      val newValues   =
         buildStream(reversedKvs.tail.headOption.map(_._1), headKeyOption, reversedKvs.head, reversedKvs.tail, Nil)
       val firstKey = reversedKvs.head._1
       val headKey  = kvs.head._1
@@ -200,7 +200,7 @@ class PotStream[K, V](
   def iterator: Iterator[(K, V)] = new Iterator[(K, V)] {
     private var current           = headOption
     override def hasNext: Boolean = current.nonEmpty
-    override def next(): (K, V) = {
+    override def next(): (K, V)   = {
       val r = current.map(sv => sv.key -> sv.value).get
       current = current.flatMap(_.nextKey).map(elems)
       r

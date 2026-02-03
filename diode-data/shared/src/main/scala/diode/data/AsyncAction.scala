@@ -50,7 +50,7 @@ trait AsyncAction[A, P <: AsyncAction[A, P]] extends Action {
     * @tparam M
     * @return
     */
-  def handle[M](pf: PartialFunction[PotState, ActionResult[M]]) =
+  def handle[M](pf: PartialFunction[PotState, ActionResult[M]]): ActionResult[M] =
     pf(state)
 
   /**
@@ -76,7 +76,7 @@ trait AsyncAction[A, P <: AsyncAction[A, P]] extends Action {
     *
     * @return
     */
-  def pending =
+  def pending: P =
     next(PotState.PotPending, result)
 
   /**
@@ -86,7 +86,7 @@ trait AsyncAction[A, P <: AsyncAction[A, P]] extends Action {
     *   Result for the action.
     * @return
     */
-  def ready(a: A) =
+  def ready(a: A): P =
     next(PotState.PotReady, Success(a))
 
   /**
@@ -96,7 +96,7 @@ trait AsyncAction[A, P <: AsyncAction[A, P]] extends Action {
     *   Reason for the failure.
     * @return
     */
-  def failed(ex: Throwable) =
+  def failed(ex: Throwable): P =
     next(PotState.PotFailed, Failure(ex))
 
   /**
@@ -113,7 +113,7 @@ trait AsyncAction[A, P <: AsyncAction[A, P]] extends Action {
     */
   def effect[B](f: => Future[B])(success: B => A, failure: Throwable => Throwable = identity)(implicit
       ec: ExecutionContext
-  ) =
+  ): EffectSingle[P] =
     Effect(f.map(x => ready(success(x))).recover { case e: Throwable => failed(failure(e)) })
 }
 
@@ -163,7 +163,7 @@ trait AsyncActionRetriable[A, P <: AsyncActionRetriable[A, P]] extends AsyncActi
     *   Updated retry policy
     * @return
     */
-  def failed(ex: Throwable, nextRetryPolicy: RetryPolicy = retryPolicy) =
+  def failed(ex: Throwable, nextRetryPolicy: RetryPolicy = retryPolicy): P =
     next(PotState.PotFailed, Failure(ex), nextRetryPolicy)
 
   /**
@@ -180,7 +180,9 @@ trait AsyncActionRetriable[A, P <: AsyncActionRetriable[A, P]] extends AsyncActi
     */
   def effectWithRetry[B](
       f: => Future[B]
-  )(success: B => A, failure: Throwable => Throwable = identity)(implicit ec: ExecutionContext) =
+  )(success: B => A, failure: Throwable => Throwable = identity)(implicit
+      ec: ExecutionContext
+  ): RetryPolicy => EffectSingle[P] =
     (nextRetryPolicy: RetryPolicy) =>
       Effect(f.map(x => ready(success(x))).recover { case e: Throwable => failed(failure(e), nextRetryPolicy) })
 }
@@ -199,7 +201,9 @@ object AsyncAction {
     * @return
     *   The handler function
     */
-  def mapHandler[K, V, A <: Iterable[(K, Pot[V])], M, P <: AsyncAction[A, P]](keys: Set[K]) = {
+  def mapHandler[K, V, A <: Iterable[(K, Pot[V])], M, P <: AsyncAction[A, P]](
+      keys: Set[K]
+  ): (AsyncAction[A, P], ActionHandler[M, PotMap[K, V]], Effect) => ActionResult[M] = {
     require(keys.nonEmpty, "AsyncAction:mapHandler - The set of keys to update can't be empty")
     (action: AsyncAction[A, P], handler: ActionHandler[M, PotMap[K, V]], updateEffect: Effect) => {
       import PotState._
@@ -238,7 +242,9 @@ object AsyncAction {
     * @return
     *   The handler function
     */
-  def vectorHandler[V, A <: Iterable[(Int, Pot[V])], M, P <: AsyncAction[A, P]](indices: Set[Int]) = {
+  def vectorHandler[V, A <: Iterable[(Int, Pot[V])], M, P <: AsyncAction[A, P]](
+      indices: Set[Int]
+  ): (AsyncAction[A, P], ActionHandler[M, PotVector[V]], Effect) => ActionResult[M] = {
     require(indices.nonEmpty, "AsyncAction:vectorHandler - The set of indices to update can't be empty")
     (action: AsyncAction[A, P], handler: ActionHandler[M, PotVector[V]], updateEffect: Effect) => {
       import PotState._
@@ -286,7 +292,9 @@ object AsyncActionRetriable {
     * @return
     *   The handler function
     */
-  def mapHandler[K, V, A <: Iterable[(K, Pot[V])], M, P <: AsyncActionRetriable[A, P]](keys: Set[K]) = {
+  def mapHandler[K, V, A <: Iterable[(K, Pot[V])], M, P <: AsyncActionRetriable[A, P]](
+      keys: Set[K]
+  ): (AsyncActionRetriable[A, P], ActionHandler[M, PotMap[K, V]], RetryPolicy => Effect) => ActionResult[M] = {
     require(keys.nonEmpty, "AsyncActionRetriable:mapHandler - The set of keys to update can't be empty")
     (action: AsyncActionRetriable[A, P], handler: ActionHandler[M, PotMap[K, V]], updateEffect: RetryPolicy => Effect) => {
       import PotState._
@@ -329,7 +337,9 @@ object AsyncActionRetriable {
     * @return
     *   The handler function
     */
-  def vectorHandler[V, A <: Iterable[(Int, Pot[V])], M, P <: AsyncActionRetriable[A, P]](indices: Set[Int]) = {
+  def vectorHandler[V, A <: Iterable[(Int, Pot[V])], M, P <: AsyncActionRetriable[A, P]](
+      indices: Set[Int]
+  ): (AsyncActionRetriable[A, P], ActionHandler[M, PotVector[V]], RetryPolicy => Effect) => ActionResult[M] = {
     require(indices.nonEmpty, "AsyncActionRetriable:vectorHandler - The set of indices to update can't be empty")
     (action: AsyncActionRetriable[A, P], handler: ActionHandler[M, PotVector[V]], updateEffect: RetryPolicy => Effect) => {
       import PotState._

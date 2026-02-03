@@ -2,7 +2,7 @@ package diode
 
 import diode.util.RunAfter
 
-import scala.concurrent._
+import scala.concurrent.*
 import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
 
@@ -99,7 +99,7 @@ abstract class EffectBase(val ec: ExecutionContext) extends Effect { self =>
   *   The effect function, returning a `Future[A]`
   */
 class EffectSingle[A] private[diode] (f: () => Future[A], ec: ExecutionContext) extends EffectBase(ec) {
-  override def run(dispatch: Any => Unit) = f().map(dispatch)(ec)
+  override def run(dispatch: Any => Unit): Future[Unit] = f().map(dispatch)(ec)
 
   override def toFuture: Future[A] = f()
 }
@@ -119,7 +119,7 @@ class EffectSeq(head: Effect, tail: Seq[Effect], ec: ExecutionContext) extends E
       prev.flatMap(_ => f(effect))(ec)
     }
 
-  override def run(dispatch: Any => Unit) =
+  override def run(dispatch: Any => Unit): Future[Unit] =
     executeWith(_.run(dispatch))
 
   override def >>(that: Effect) =
@@ -128,16 +128,16 @@ class EffectSeq(head: Effect, tail: Seq[Effect], ec: ExecutionContext) extends E
   override def <<(that: Effect) =
     new EffectSeq(that, head +: tail, ec)
 
-  override def size =
+  override def size: Int =
     head.size + tail.foldLeft(0)((acc, e) => acc + e.size)
 
-  override def toFuture =
+  override def toFuture: Future[Any] =
     executeWith(_.toFuture)
 
-  override def map[B: ActionType](g: Any => B) =
+  override def map[B: ActionType](g: Any => B): EffectSeq =
     new EffectSeq(head.map(g), tail.map(_.map(g)), ec)
 
-  override def flatMap[B: ActionType](g: Any => Future[B]) =
+  override def flatMap[B: ActionType](g: Any => Future[B]): EffectSeq =
     new EffectSeq(head.flatMap(g), tail.map(_.flatMap(g)), ec)
 }
 
@@ -153,22 +153,22 @@ class EffectSet(val head: Effect, val tail: Set[Effect], ec: ExecutionContext)
     extends EffectBase(ec)
     with EffectSetExecutionOps {
 
-  override def run(dispatch: Any => Unit) =
+  override def run(dispatch: Any => Unit): Future[Unit] =
     executeWith(_.run(dispatch)).map(_ => ())(ec)
 
   override def +(that: Effect) =
     new EffectSet(head, tail + that, ec)
 
-  override def size =
+  override def size: Int =
     head.size + tail.foldLeft(0)((acc, e) => acc + e.size)
 
-  override def toFuture =
+  override def toFuture: Future[Set[Any]] =
     executeWith(_.toFuture)
 
-  override def map[B: ActionType](g: Any => B) =
+  override def map[B: ActionType](g: Any => B): EffectSet =
     new EffectSet(head.map(g), tail.map(_.map(g)), ec)
 
-  override def flatMap[B: ActionType](g: Any => Future[B]) =
+  override def flatMap[B: ActionType](g: Any => Future[B]): EffectSet =
     new EffectSet(head.flatMap(g), tail.map(_.flatMap(g)), ec)
 }
 

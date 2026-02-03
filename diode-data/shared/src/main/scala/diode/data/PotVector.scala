@@ -22,7 +22,7 @@ class PotVector[V](
     newArray
   }
 
-  override def updated(idx: Int, value: Pot[V]) = {
+  override def updated(idx: Int, value: Pot[V]): PotVector[V] = {
     if (idx < 0 || idx >= length)
       throw new IndexOutOfBoundsException
     val newElems = if (idx >= elems.length) {
@@ -96,8 +96,8 @@ class PotVector[V](
       else
         Some(idx)
     }
-    private var current           = findNext(0)
-    override def hasNext: Boolean = current.nonEmpty
+    private var current                = findNext(0)
+    override def hasNext: Boolean      = current.nonEmpty
     override def next(): (Int, Pot[V]) = {
       val idx = current.get
       current = findNext(idx + 1)
@@ -105,7 +105,7 @@ class PotVector[V](
     }
   }
 
-  override def remove(idx: Int) = {
+  override def remove(idx: Int): PotVector[V] = {
     elems(idx) = None
     this
   }
@@ -124,7 +124,7 @@ class PotVector[V](
     runAfterImpl.runAfter(0)(fetcher.fetch(indices))
   }
 
-  override def clear =
+  override def clear: PotVector[V] =
     new PotVector(fetcher, length, Array.empty[Option[Pot[V]]])
 
   override def get(idx: Int): Pot[V] = {
@@ -157,7 +157,7 @@ class PotVector[V](
     if (end <= start)
       return Seq()
     var missing = List.empty[Int]
-    val values = (start until end).map { idx =>
+    val values  = (start until end).map { idx =>
       if (idx >= elems.length || elems(idx).isEmpty) {
         missing ::= idx
         Pending().asInstanceOf[Pot[V]]
@@ -177,7 +177,7 @@ class PotVector[V](
   def resized(newLength: Int) =
     new PotVector(fetcher, newLength, if (newLength < elems.length) util.Arrays.copyOf(elems, newLength) else elems)
 
-  def contains(idx: Int) = {
+  def contains(idx: Int): Boolean = {
     if (idx < 0 || idx >= length)
       throw new IndexOutOfBoundsException
     elems(idx).isDefined

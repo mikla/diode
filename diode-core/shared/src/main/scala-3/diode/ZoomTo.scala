@@ -13,7 +13,7 @@ trait ZoomTo[M, S] {
     * @param set
     *   Function to update the model with a new value
     */
-  def zoomRW[T](get: S => T)(set: (S, T) => S)(implicit feq: FastEq[_ >: T]): ModelRW[M, T]
+  def zoomRW[T](get: S => T)(set: (S, T) => S)(implicit feq: FastEq[? >: T]): ModelRW[M, T]
 
   /**
     * An easier way to zoom into a RW model by just specifying a single chained accessor for the field. This works for cases
