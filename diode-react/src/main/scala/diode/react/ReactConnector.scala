@@ -1,7 +1,7 @@
 package diode.react
 
-import diode._
-import japgolly.scalajs.react._
+import diode.*
+import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
@@ -136,13 +136,14 @@ trait ReactConnector[M <: AnyRef] { circuit: Circuit[M] =>
         (stateHasChanged >>= updateState).runNow()
       }
 
-      def render(s: S, compB: ReactConnectProps[S]) = wrap(modelReader)(compB)
+      def render(compB: ReactConnectProps[S], s: S) = wrap(modelReader)(compB)
     }
 
     ScalaComponent
       .builder[ReactConnectProps[S]]("DiodeWrapper")
       .initialState(modelReader())
-      .renderBackend[Backend]
+      .backend(new Backend(_))
+      .renderPS(_.backend.render(_, _))
       .componentDidMount(_.backend.didMount)
       .componentWillUnmount(_.backend.willUnmount)
       .shouldComponentUpdatePure(scope => (scope.currentState ne scope.nextState) || (scope.currentProps ne scope.nextProps))

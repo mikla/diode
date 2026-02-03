@@ -1,8 +1,8 @@
-import sbt.Keys._
-import sbt._
+import sbt.Keys.*
+import sbt.*
 // shadow sbt-scalajs' crossProject and CrossType from Scala.js 0.6.x
 import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
-import Util._
+import Util.*
 
 ThisBuild / scalafmtOnCompile := true
 
@@ -157,7 +157,7 @@ lazy val diodeReact: Project = project
   .settings(
     name := "diode-react",
     libraryDependencies ++= Seq(
-      "com.github.japgolly.scalajs-react" %%% "core" % "2.1.1"
+      "com.github.japgolly.scalajs-react" %%% "core" % "3.0.0"
     )
   )
   .dependsOn(diode.js)
