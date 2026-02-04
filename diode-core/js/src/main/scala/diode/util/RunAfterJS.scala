@@ -5,7 +5,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.js.timers._
 
 class RunAfterJS extends RunAfter {
-  override def runAfter[A](delay: FiniteDuration)(f: => A) = {
+  override def runAfter[A](delay: FiniteDuration)(f: => A): Future[A] = {
     val p = Promise[A]()
     setTimeout(delay)(p.success(f))
     p.future

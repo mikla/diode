@@ -108,6 +108,6 @@ abstract class ActionHandler[M, T](val modelRW: ModelRW[M, T]) {
 }
 
 object ActionHandler {
-  implicit def extractHandler[M <: AnyRef](actionHandler: ActionHandler[M, _]): (M, Any) => Option[ActionResult[M]] =
+  implicit def extractHandler[M <: AnyRef](actionHandler: ActionHandler[M, ?]): (M, Any) => Option[ActionResult[M]] =
     actionHandler.handleAction
 }

@@ -6,8 +6,8 @@ import scala.concurrent._
 import scala.concurrent.duration.FiniteDuration
 
 class RunAfterJVM extends RunAfter {
-  override def runAfter[A](delay: FiniteDuration)(f: => A) = {
-    val p = Promise[A]()
+  override def runAfter[A](delay: FiniteDuration)(f: => A): Future[A] = {
+    val p    = Promise[A]()
     val task = new Runnable {
       def run() = p.success(f)
     }

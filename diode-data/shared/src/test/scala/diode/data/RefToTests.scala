@@ -1,7 +1,7 @@
 package diode.data
 
 import diode.{Action, RootModelRW}
-import utest._
+import utest.*
 
 object RefToTests extends TestSuite {
 
@@ -22,12 +22,12 @@ object RefToTests extends TestSuite {
 
   case class RefAction(s: String) extends Action
 
-  def tests = TestSuite {
+  def tests = Tests {
     "refToMap" - {
       val fetcher = new TestFetcher[String]
       val root    = Model(PotMap(fetcher, Map("ceoID" -> Ready(User("Ms. CEO")))), Seq())
       val modelRW = new RootModelRW(root)
-      val m = root.copy(
+      val m       = root.copy(
         employees =
           Seq(Employee("CEO", RefTo("ceoID", modelRW.zoom(_.users))((id, value) => RefAction(s"Update $id to $value"))))
       )
@@ -42,7 +42,7 @@ object RefToTests extends TestSuite {
       val fetcher = new TestFetcher[Int]
       val root    = ModelV(PotVector(fetcher, 5, Vector(Ready(User("Ms. CEO")))), Seq())
       val modelRW = new RootModelRW(root)
-      val m =
+      val m       =
         root.copy(
           employees =
             Seq(Employee("CEO", RefTo(0, modelRW.zoom(_.users))((id, value) => RefAction(s"Update $id to $value"))))
@@ -56,7 +56,7 @@ object RefToTests extends TestSuite {
       val fetcher = new TestFetcher[String]
       val root    = ModelS(PotStream(fetcher, Seq("ceoID" -> Ready(User("Ms. CEO")))), Seq())
       val modelRW = new RootModelRW(root)
-      val m = root.copy(
+      val m       = root.copy(
         employees = Seq(
           Employee("CEO", RefTo.stream("ceoID", modelRW.zoom(_.users))((id, value) => RefAction(s"Update $id to $value")))
         )

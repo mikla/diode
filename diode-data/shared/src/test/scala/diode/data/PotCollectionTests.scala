@@ -1,11 +1,11 @@
 package diode.data
 
 import diode.Implicits.runAfterImpl
-import diode.data.PotState._
-import utest._
+import diode.data.PotState.*
+import utest.*
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util._
+import scala.util.*
 
 object PotCollectionTests extends TestSuite {
 
@@ -16,7 +16,7 @@ object PotCollectionTests extends TestSuite {
     override def fetch(keys: Iterable[K]): Unit = lastFetch = keys
   }
 
-  def tests = TestSuite {
+  def tests = Tests {
     "PotMap" - {
       "update" - {
         val fetcher = new TestFetcher[String]

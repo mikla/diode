@@ -1,7 +1,7 @@
 package diode.react
 
-import diode._
-import japgolly.scalajs.react._
+import diode.*
+import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
@@ -9,8 +9,8 @@ import scala.scalajs.js
 /**
   * Wraps a model reader, dispatcher and React connector to be passed to React components in props.
   */
-case class ModelProxy[S](modelReader: ModelRO[S], theDispatch: Any => Unit, connector: ReactConnector[_ <: AnyRef]) {
-  def value = modelReader()
+case class ModelProxy[S](modelReader: ModelRO[S], theDispatch: Any => Unit, connector: ReactConnector[? <: AnyRef]) {
+  def value: S = modelReader()
 
   /**
     * Perform a dispatch action in a `Callback`
@@ -22,16 +22,17 @@ case class ModelProxy[S](modelReader: ModelRO[S], theDispatch: Any => Unit, conn
     */
   def dispatchNow[A: ActionType](action: A): Unit = theDispatch(action)
 
-  def apply() = modelReader()
+  def apply(): S = modelReader()
 
-  def zoom[T](f: S => T)(implicit feq: FastEq[_ >: T]) = ModelProxy(modelReader.zoom(f), theDispatch, connector)
+  def zoom[T](f: S => T)(implicit feq: FastEq[? >: T]): ModelProxy[T] =
+    ModelProxy(modelReader.zoom(f), theDispatch, connector)
 
-  def wrap[T <: AnyRef, C](f: S => T)(compB: ModelProxy[T] => C)(implicit ev: C => VdomElement, feq: FastEq[_ >: T]): C = {
+  def wrap[T <: AnyRef, C](f: S => T)(compB: ModelProxy[T] => C)(implicit ev: C => VdomElement, feq: FastEq[? >: T]): C = {
     val _ = ev
     compB(zoom(f))
   }
 
-  def connect[T <: AnyRef](f: S => T)(implicit feq: FastEq[_ >: T]): ReactConnectProxy[T] = {
+  def connect[T <: AnyRef](f: S => T)(implicit feq: FastEq[? >: T]): ReactConnectProxy[T] = {
     connector.connect(modelReader.zoom(f))
   }
 }
@@ -50,7 +51,7 @@ trait ReactConnector[M <: AnyRef] { circuit: Circuit[M] =>
     */
   def wrap[S <: AnyRef, C](
       zoomFunc: M => S
-  )(compB: ModelProxy[S] => C)(implicit ev: C => VdomElement, feq: FastEq[_ >: S]): C = {
+  )(compB: ModelProxy[S] => C)(implicit ev: C => VdomElement, feq: FastEq[? >: S]): C = {
     wrap(circuit.zoom(zoomFunc))(compB)
   }
 
@@ -81,7 +82,7 @@ trait ReactConnector[M <: AnyRef] { circuit: Circuit[M] =>
     * @return
     *   A ReactConnectProxy
     */
-  def connect[S <: AnyRef](zoomFunc: M => S, key: js.Any)(implicit feq: FastEq[_ >: S]): ReactConnectProxy[S] = {
+  def connect[S <: AnyRef](zoomFunc: M => S, key: js.Any)(implicit feq: FastEq[? >: S]): ReactConnectProxy[S] = {
     connect(circuit.zoom(zoomFunc), key)
   }
 
@@ -94,7 +95,7 @@ trait ReactConnector[M <: AnyRef] { circuit: Circuit[M] =>
     * @return
     *   A ReactConnectProxy
     */
-  def connect[S <: AnyRef](zoomFunc: M => S)(implicit feq: FastEq[_ >: S]): ReactConnectProxy[S] = {
+  def connect[S <: AnyRef](zoomFunc: M => S)(implicit feq: FastEq[? >: S]): ReactConnectProxy[S] = {
     connect(circuit.zoom(zoomFunc))
   }
 
@@ -135,13 +136,14 @@ trait ReactConnector[M <: AnyRef] { circuit: Circuit[M] =>
         (stateHasChanged >>= updateState).runNow()
       }
 
-      def render(s: S, compB: ReactConnectProps[S]) = wrap(modelReader)(compB)
+      def render(compB: ReactConnectProps[S], s: S) = wrap(modelReader)(compB)
     }
 
     ScalaComponent
       .builder[ReactConnectProps[S]]("DiodeWrapper")
       .initialState(modelReader())
-      .renderBackend[Backend]
+      .backend(new Backend(_))
+      .renderPS(_.backend.render(_, _))
       .componentDidMount(_.backend.didMount)
       .componentWillUnmount(_.backend.willUnmount)
       .shouldComponentUpdatePure(scope => (scope.currentState ne scope.nextState) || (scope.currentProps ne scope.nextProps))

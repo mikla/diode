@@ -1,17 +1,17 @@
 package diode.util
 
 import diode.{AnyAction, Effect}
-import utest._
+import utest.*
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
-import scala.concurrent.duration._
+import scala.concurrent.*
+import scala.concurrent.duration.*
 import diode.Implicits.runAfterImpl
 
 object RetryTests extends TestSuite {
-  import AnyAction._
+  import AnyAction.*
 
-  def tests = TestSuite {
+  def tests = Tests {
     "Immediate" - {
       val policy = Retry.Immediate(3)
       val effect = (retryPolicy: RetryPolicy) => Effect(Future("42"))

@@ -8,7 +8,7 @@ private[macros] object CaseClass {
     if (obj.tpe.typeSymbol.caseFields.isEmpty) {
       Left(s"Type ${obj.tpe.typeSymbol.fullName} of ${obj.tpe.show} field must be a case class.")
     } else {
-      Right(new CaseClass[q.type]()(obj))
+      Right(new CaseClass[q.type](obj))
     }
   }
 

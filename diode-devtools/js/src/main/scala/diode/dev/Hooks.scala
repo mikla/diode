@@ -5,8 +5,8 @@ import org.scalajs.dom
 import org.scalajs.dom.KeyboardEvent
 
 object Hooks {
-  def hookPersistState(id: String, dispatch: Dispatcher) = {
-    def keyDown(event: KeyboardEvent) = {
+  def hookPersistState(id: String, dispatch: Dispatcher): Unit = {
+    def keyDown(event: KeyboardEvent): Unit = {
       if (event.ctrlKey && event.shiftKey) {
         val c = Character.toChars(event.keyCode)(0).toLower
         c match {
@@ -20,6 +20,6 @@ object Hooks {
         }
       }
     }
-    dom.window.addEventListener("keydown", keyDown _)
+    dom.window.addEventListener("keydown", (event: KeyboardEvent) => keyDown(event))
   }
 }

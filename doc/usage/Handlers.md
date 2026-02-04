@@ -30,20 +30,24 @@ defined as a trait and two case classes.
 ```scala
 sealed trait FileNode {
   def id: String
+
   def name: String
+
   def children: IndexedSeq[FileNode]
+
   def isDirectory: Boolean
 }
 
 final case class Directory(
-  id: String, 
-  name: String, 
-  children: IndexedSeq[FileNode] = IndexedSeq.empty) extends FileNode {
+                            id: String,
+                            name: String,
+                            children: IndexedSeq[FileNode] = IndexedSeq.empty) extends FileNode {
   override def isDirectory = true
 }
 
 final case class File(id: String, name: String) extends FileNode {
   val children = IndexedSeq.empty[FileNode]
+
   override def isDirectory = false
 }
 ```
@@ -62,9 +66,13 @@ And some actions, too!
 
 ```scala
 case class ReplaceTree(newTree: Directory) extends Action
+
 case class AddNode(path: Seq[String], node: FileNode) extends Action
+
 case class RemoveNode(path: Seq[String]) extends Action
+
 case class ReplaceNode(path: Seq[String], node: FileNode) extends Action
+
 case class Select(selected: Seq[String]) extends Action
 ```
 
@@ -93,9 +101,13 @@ it's rather straightforward:
 ```scala
 abstract class ActionHandler[M, T](val modelRW: ModelRW[M, T]) {
   def handle: PartialFunction[AnyRef, ActionResult[M]]
+
   def value: T = modelRW.eval(currentModel)
-  def updated(newValue: T): ActionResult[M] = ...
-  ...
+
+  def updated(newValue: T): ActionResult[M] =
+
+...
+...
 }
 ```
 
@@ -112,7 +124,7 @@ a valid path, so we should wrap the result in an `Option`.
 
 ```scala
 def zoomToChildren[M](path: Seq[String], rw: ModelRW[M, Directory])
-  : Option[ModelRW[M, IndexedSeq[FileNode]]] = {
+: Option[ModelRW[M, IndexedSeq[FileNode]]] = {
   if (path.isEmpty) {
     Some(rw.zoomTo(_.children))
   } else {
@@ -120,6 +132,7 @@ def zoomToChildren[M](path: Seq[String], rw: ModelRW[M, Directory])
   }
 }
 ```
+
 In the trivial case (and at the end of the recursion) the path is empty and we'll return a `ModelRW` for the current
 directory's `children`.
 
@@ -127,7 +140,7 @@ Let's take a look at the full implementation.
 
 ```scala
 def zoomToChildren[M](path: Seq[String], rw: ModelRW[M, Directory])
-  : Option[ModelRW[M, IndexedSeq[FileNode]]] = {
+: Option[ModelRW[M, IndexedSeq[FileNode]]] = {
   if (path.isEmpty) {
     Some(rw.zoomTo(_.children))
   } else {
@@ -150,46 +163,49 @@ First we try to find the index to the `children` sequence, where the next direct
 the result we either return `None` for failure, or dive deeper into the hierarchy by recursively calling the same
 function again with am updated reader/writer and path. The writer function copies all nodes preceding the one we are
 interested in, then adds a new node and then any nodes succeeding the original node.
- 
+
 Now we are ready to write action handlers for rest of the tree manipulation functions.
 
 ```scala
-case AddNode(path, node) =>
-  // zoom to the directory and add new node at the end of its children list
-  zoomToChildren(path.tail, modelRW) match {
-    case Some(rw) => ModelUpdate(rw.updated(rw.value :+ node))
-    case None => noChange
-  }
+case AddNode(path, node)
+=>
+// zoom to the directory and add new node at the end of its children list
+zoomToChildren(path.tail, modelRW) match {
+  case Some(rw) => ModelUpdate(rw.updated(rw.value :+ node))
+  case None => noChange
+}
 ```
 
 With the helper function to navigate the hierarchy the actual implementation of `AddNode` turns out to be quite trivial.
 Since we have access to the `children` of the parent directory, we simply need to add the new node at the end of it.
 
 ```scala
-case RemoveNode(path) =>
-  if (path.init.nonEmpty) {
-    // zoom to parent directory and remove node from its children list
-    val nodeId = path.last
-    zoomToChildren(path.init.tail, modelRW) match {
-      case Some(rw) => ModelUpdate(rw.updated(rw.value.filterNot(_.id == nodeId)))
-      case None => noChange
-    }
-  } else {
-    // cannot remove root
-    noChange
+case RemoveNode(path)
+=>
+if (path.init.nonEmpty) {
+  // zoom to parent directory and remove node from its children list
+  val nodeId = path.last
+  zoomToChildren(path.init.tail, modelRW) match {
+    case Some(rw) => ModelUpdate(rw.updated(rw.value.filterNot(_.id == nodeId)))
+    case None => noChange
   }
-case ReplaceNode(path, node) =>
-  if (path.init.nonEmpty) {
-    // zoom to parent directory and replace node in its children list with a new one
-    val nodeId = path.last
-    zoomToChildren(path.init.tail, modelRW) match {
-      case Some(rw) => ModelUpdate(rw.updated(rw.value.map(n => if (n.id == nodeId) node else n)))
-      case None => noChange
-    }
-  } else {
-    // cannot replace root
-    noChange
+} else {
+  // cannot remove root
+  noChange
+}
+case ReplaceNode(path, node)
+=>
+if (path.init.nonEmpty) {
+  // zoom to parent directory and replace node in its children list with a new one
+  val nodeId = path.last
+  zoomToChildren(path.init.tail, modelRW) match {
+    case Some(rw) => ModelUpdate(rw.updated(rw.value.map(n => if (n.id == nodeId) node else n)))
+    case None => noChange
   }
+} else {
+  // cannot replace root
+  noChange
+}
 ```
 
 Removal and replacement are almost identical, except for the final transformation of the `children` sequence. Here we
@@ -217,7 +233,7 @@ function.
 ## Handling actions multiple times
 
 The default behaviour of `composeHandlers` combines your handler functions in such a way that only one of them gets to
-handle the passed action. In some cases you'll want to divide the processing of an action into multiple handlers, for 
+handle the passed action. In some cases you'll want to divide the processing of an action into multiple handlers, for
 example when a change in model causes some secondary changes elsewhere in the model (typically related to the UI). For
 these purposes you can use `foldHandlers`, which runs the action through all the provided handlers, passing an updated
 model from one handler to the next and combining the resulting effects.
@@ -230,7 +246,7 @@ val selectionHandler = new ActionHandler(zoomTo(_.tree.selected)) {
     case Select(sel) => updated(sel)
     case RemoveNode(path) =>
       // select parent node if selected node is removed
-      if(path.init.nonEmpty && path == value)
+      if (path.init.nonEmpty && path == value)
         updated(path.init)
       else
         noChange
@@ -255,12 +271,15 @@ your `Circuit` implementation, it's usually better to have them as separate clas
 
 ```scala
 class DirectoryTreeHandler[M](modelRW: ModelRW[M, Directory]) extends ActionHandler(modelRW) {
-  override def handle = { ... }
+  override def handle = {
+  ...
+  }
 }
 
 object AppCircuit extends Circuit[RootModel] {
   val treeHandler = new DirectoryTreeHandler(zoomTo(_.tree.root))
-  ...
+  .
+..
 }
 ```
 
@@ -269,7 +288,7 @@ doesn't care about the root model type, usually easiest is just to use the data 
 
 ```scala
 object DirectoryTreeHandlerTests extends TestSuite {
-  def tests = TestSuite {
+  def tests = Tests {
     // test data
     val dir = Directory("/", "/", Vector(
       Directory("2", "My files", Vector(
@@ -283,7 +302,7 @@ object DirectoryTreeHandlerTests extends TestSuite {
 ```
 
 In individual test cases
- 
+
 1. Build a handler instance.
 2. Call the `handleAction` method with an appropriate action and current model.
 3. Check the result.

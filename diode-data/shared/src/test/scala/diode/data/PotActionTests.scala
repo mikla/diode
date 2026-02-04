@@ -65,7 +65,7 @@ object PotActionTests extends TestSuite {
     override def fetch(keys: Iterable[String]): Unit     = ()
   }
 
-  def tests = TestSuite {
+  def tests = Tests {
     "PotAction" - {
       "CreateEmpty" - {
         val ta = TestAction()
@@ -95,7 +95,7 @@ object PotActionTests extends TestSuite {
         }
       }
       "EffectFail" - {
-        val ta = TestAction()
+        val ta  = TestAction()
         val eff =
           ta.effect(Future { if (true) throw new Exception("Oh no!") else 42 })(
             _.toString,
@@ -157,7 +157,7 @@ object PotActionTests extends TestSuite {
         val model       = Model(PendingStale("41"))
         val modelRW     = new RootModelRW(model)
         val handlerFail = new TestFailHandler(modelRW.zoomRW(_.s)((m, v) => m.copy(s = v)))
-        val nextAction = handlerFail.handleAction(model, TestActionRP(Failed(new TimeoutException), Immediate(1))) match {
+        val nextAction  = handlerFail.handleAction(model, TestActionRP(Failed(new TimeoutException), Immediate(1))) match {
           case Some(EffectOnly(effects)) =>
             assert(effects.size == 1)
             // run effect
