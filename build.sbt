@@ -87,7 +87,7 @@ val sourceMapSetting: Def.Initialize[Option[String]] = Def.settingDyn(
     val uri = s"$a->$g/v${version.value}/${name.value}/"
     scalaVerDependent {
       case (2, _) => s"-P:scalajs:mapSourceURI:$uri"
-      case (3, _) => s"-scalajs:mapSourceURI:$uri"
+      case (3, _) => s"-scalajs-mapSourceURI:$uri"
     }
   }
 )
