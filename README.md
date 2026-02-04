@@ -4,36 +4,50 @@
 >
 > a semiconductor device with two terminals, typically allowing the flow of current in one direction only
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/suzaku-io/diode)
-[![Build Status](https://travis-ci.org/suzaku-io/diode.svg?branch=master)](https://travis-ci.org/suzaku-io/diode)
-[![Scala.js](https://www.scala-js.org/assets/badges/scalajs-0.6.17.svg)](https://www.scala-js.org)
+[![Build](https://github.com/mikla/diode/actions/workflows/scala.yml/badge.svg)](https://github.com/mikla/diode/actions/workflows/scala.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.mikla/diode_2.13.svg)](https://central.sonatype.com/artifact/io.github.mikla/diode_2.13)
+[![Scala.js](https://www.scala-js.org/assets/badges/scalajs-1.0.0.svg)](https://www.scala-js.org)
+
+> **Note:** This is a fork of [suzaku-io/diode](https://github.com/suzaku-io/diode) with updated dependencies, including
+> support for **scalajs-react 3.0.0** and **Scala 3**. Published to Maven Central under `io.github.mikla`.
 
 Diode is a Scala/Scala.js library for managing immutable application state with unidirectional data flow. It is heavily
 influenced and inspired by [Flux](https://facebook.github.io/flux/) and
 [Elm](https://github.com/evancz/elm-architecture-tutorial/) architectures, and libraries like
-[Om](https://github.com/omcljs/om) and [Redux](https://github.com/reactjs/redux). Diode helps you build applications that
+[Om](https://github.com/omcljs/om) and [Redux](https://github.com/reactjs/redux). Diode helps you build applications
+that
 are easy to reason about, have predictable behaviour, are easy to test and debug and are type safe. It's a compact, high
 performing and extensible library with no external dependencies.
 
 ## Documentation
 
-Full documentation [available here](https://diode.suzaku.io).
+Full documentation [available here](https://diode.suzaku.io) (original project docs).
 
 ## Getting Started
 
 Add following dependency declaration to your Scala project.
 
 ```scala
-"io.suzaku" %% "diode" % "1.1.8"
+"io.github.mikla" %% "diode" % "1.2.0"
 ```
 
 In a Scala.js project the dependency looks like this.
 
 ```scala
-"io.suzaku" %%% "diode" % "1.1.8"
+"io.github.mikla" %%% "diode" % "1.2.0"
 ```
 
-Starting with version "1.1.6" diode has dropped support for Scala 2.11. If you need 2.11 support use version "1.1.5"
+For React integration with scalajs-react 3.0.0:
+
+```scala
+"io.github.mikla" %%% "diode-react" % "1.2.0"
+```
+
+### Supported versions
+
+- Scala 2.13 and Scala 3
+- Scala.js 1.x
+- scalajs-react 3.0.0
 
 <img align="right" src="doc/images/architecture.png">
 
@@ -52,11 +66,14 @@ the application model happen through _actions_. Let's define a couple of useful 
 
 ```scala
 case class Increase(amount: Int) extends Action
+
 case class Decrease(amount: Int) extends Action
+
 case object Reset extends Action
 ```
 
-Actions in Diode can be anything (that extends `diode.Action` trait or provides an `ActionType[A]` type class instance), but typically
+Actions in Diode can be anything (that extends `diode.Action` trait or provides an `ActionType[A]` type class instance),
+but typically
 case classes work best due to their pattern matching capability.
 
 ### The Circuit
@@ -68,6 +85,7 @@ you'd typically define a singleton object extending the Circuit. Your only respo
 ```scala
 object AppCircuit extends Circuit[RootModel] {
   def initialModel = RootModel(0)
+
   override val actionHandler: HandlerFunction =
     (model, action) => action match {
       case Increase(a) => Some(ModelUpdate(model.copy(counter = model.counter + a)))
@@ -192,5 +210,5 @@ See separate [changes document](CHANGES.md)
 Diode was created and is maintained by [Otto Chrons](https://github.com/ochrons) - otto@chrons.me - Twitter:
 [@ochrons](https://twitter.com/ochrons).
 
-Contributors: @PerWiklander, @DylanArnold, @netzwerg, @alonsodomin, @glmars, @vpavkin, @bpatters, 
+Contributors: @PerWiklander, @DylanArnold, @netzwerg, @alonsodomin, @glmars, @vpavkin, @bpatters,
 @cquiroz, @teozkr, @mla310, @mprevel, @an-tex, @torstenrudolf, @devkat, @russwyte
