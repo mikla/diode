@@ -2,7 +2,7 @@ import sbt.Keys.*
 import sbt.*
 // shadow sbt-scalajs' crossProject and CrossType from Scala.js 0.6.x
 import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
-import Util.*
+import ScalaVersionUtil.*
 
 ThisBuild / scalafmtOnCompile := true
 
@@ -62,18 +62,17 @@ val commonSettings = Seq(
 
 inThisBuild(
   List(
-    homepage            := Some(url("https://github.com/suzaku-io/diode")),
-    licenses            := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
-    sonatypeProfileName := "io.suzaku",
-    developers          := List(
+    homepage   := Some(url("https://github.com/mikla/diode")),
+    licenses   := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+    developers := List(
       Developer("ochrons", "Otto Chrons", "", url("https://github.com/ochrons"))
     ),
-    organization := "io.suzaku",
+    organization := "io.github.mikla",
     scmInfo      := Some(
       ScmInfo(
-        url("https://github.com/suzaku-io/diode"),
-        "scm:git:git@github.com:suzaku-io/diode.git",
-        Some("scm:git:git@github.com:suzaku-io/diode.git")
+        url("https://github.com/mikla/diode"),
+        "scm:git:git@github.com:mikla/diode.git",
+        Some("scm:git:git@github.com:mikla/diode.git")
       )
     ),
     Test / publishArtifact := false
@@ -84,7 +83,7 @@ val sourceMapSetting: Def.Initialize[Option[String]] = Def.settingDyn(
   if (isSnapshot.value) Def.setting(None)
   else {
     val a   = baseDirectory.value.toURI.toString.replaceFirst("[^/]+/?$", "")
-    val g   = "https://raw.githubusercontent.com/suzaku-io/diode"
+    val g   = "https://raw.githubusercontent.com/mikla/diode"
     val uri = s"$a->$g/v${version.value}/${name.value}/"
     scalaVerDependent {
       case (2, _) => s"-P:scalajs:mapSourceURI:$uri"
@@ -96,6 +95,10 @@ val sourceMapSetting: Def.Initialize[Option[String]] = Def.settingDyn(
 val commonJsSettings = Seq(
   scalacOptions += sourceMapSetting.value,
   scalacOptions ++= scalaVerDependent {
+    case (2, _) => "-P:scalajs:nowarnGlobalExecutionContext"
+    case (3, _) => "-scalajs"
+  }.value,
+  Test / scalacOptions ++= scalaVerDependent {
     case (2, _) => "-P:scalajs:nowarnGlobalExecutionContext"
     case (3, _) => "-scalajs"
   }.value

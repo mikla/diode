@@ -1,7 +1,7 @@
 import sbt.{CrossVersion, Def}
 import sbt.Keys.scalaVersion
 
-object Util {
+object ScalaVersionUtil {
   def scalaVerDependent[A](pf: PartialFunction[(Long, Long), A]) = Def.setting {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some(version) => pf.lift.apply(version)
