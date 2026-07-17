@@ -1,5 +1,9 @@
 # Changes
 
+## 1.3.0
+- Update diode-react to scalajs-react 4.0.0.
+- Bump Scala 2.13 cross version to 2.13.18.
+
 ## 1.2.0-RC1
 - Update diode-react to scalajs-react 2.0.0-RC3. This change can break applications that use diode-react if they use older versions of scalajs-react.
 - This version removes the backwards compatibility with Scala 2.12 because of scalajs-react 2.
