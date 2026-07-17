@@ -100,6 +100,26 @@ val commonJsSettings = Seq(
   }.value
 )
 
+// Root project only aggregates; it must never be published, otherwise its empty
+// artifact would collide with the `diode` module artifact on Maven Central.
+lazy val root = project
+  .in(file("."))
+  .settings(
+    name           := "diode-root",
+    publish / skip := true
+  )
+  .aggregate(
+    diodeCore.jvm,
+    diodeCore.js,
+    diodeData.jvm,
+    diodeData.js,
+    diode.jvm,
+    diode.js,
+    diodeDevtools.jvm,
+    diodeDevtools.js,
+    diodeReact
+  )
+
 lazy val diodeCore = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Full)
   .in(file("diode-core"))
