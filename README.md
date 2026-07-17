@@ -9,7 +9,7 @@
 [![Scala.js](https://www.scala-js.org/assets/badges/scalajs-1.0.0.svg)](https://www.scala-js.org)
 
 > **Note:** This is a fork of [suzaku-io/diode](https://github.com/suzaku-io/diode) with updated dependencies, including
-> support for **scalajs-react 3.0.0** and **Scala 3**. Published to Maven Central under `io.github.mikla`.
+> support for **scalajs-react 4.0.0** and **Scala 3**. Published to Maven Central under `io.github.mikla`.
 
 Diode is a Scala/Scala.js library for managing immutable application state with unidirectional data flow. It is heavily
 influenced and inspired by [Flux](https://facebook.github.io/flux/) and
@@ -28,26 +28,26 @@ Full documentation [available here](https://diode.suzaku.io) (original project d
 Add following dependency declaration to your Scala project.
 
 ```scala
-"io.github.mikla" %% "diode" % "1.2.0"
+"io.github.mikla" %% "diode" % "1.3.0"
 ```
 
 In a Scala.js project the dependency looks like this.
 
 ```scala
-"io.github.mikla" %%% "diode" % "1.2.0"
+"io.github.mikla" %%% "diode" % "1.3.0"
 ```
 
-For React integration with scalajs-react 3.0.0:
+For React integration with scalajs-react 4.0.0:
 
 ```scala
-"io.github.mikla" %%% "diode-react" % "1.2.0"
+"io.github.mikla" %%% "diode-react" % "1.3.0"
 ```
 
 ### Supported versions
 
 - Scala 2.13 and Scala 3
 - Scala.js 1.x
-- scalajs-react 3.0.0
+- scalajs-react 4.0.0
 
 <img align="right" src="doc/images/architecture.png">
 
