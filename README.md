@@ -201,6 +201,36 @@ with `requestAnimationFrame`.
 A more complete application example is the [Scala.js SPA tutorial](https://github.com/ochrons/scalajs-spa-tutorial),
 demonstrating the use of React integration features and async operations.
 
+# Release procedure
+
+Releases are fully automated with [sbt-ci-release](https://github.com/sbt/sbt-ci-release) — publishing happens in CI,
+never from a local machine. The version is derived from the git tag by sbt-dynver, so there is no version to bump in
+the build files.
+
+To cut a release, push a `v`-prefixed tag:
+
+```bash
+git tag -a v1.3.1 -m "v1.3.1"
+git push origin v1.3.1
+```
+
+This triggers the [release workflow](.github/workflows/release.yml), which runs `sbt +ci-release`: it builds all
+modules for Scala 2.13 and 3, signs the artifacts with PGP and publishes them to Maven Central via the
+[Sonatype Central Portal](https://central.sonatype.com). No manual staging/release step is needed. Artifacts usually
+show up on Maven Central within 15–30 minutes.
+
+The [Release Drafter workflow](.github/workflows/release-drafter.yml) keeps a draft GitHub release up to date from
+merged pull requests — after tagging, review and publish it on the
+[releases page](https://github.com/mikla/diode/releases).
+
+The workflow relies on these repository secrets (already configured; documented here for when they need rotating):
+
+| Secret | Contents |
+|---|---|
+| `SONATYPE_USERNAME` / `SONATYPE_PASSWORD` | Central Portal user token (generate at central.sonatype.com → Account → Generate User Token) — not legacy oss.sonatype.org credentials |
+| `PGP_SECRET` | base64-encoded armored PGP private key: `gpg --armor --export-secret-keys <key-id> \| base64` |
+| `PGP_PASSPHRASE` | passphrase of that key |
+
 # Change history
 
 See separate [changes document](CHANGES.md)
