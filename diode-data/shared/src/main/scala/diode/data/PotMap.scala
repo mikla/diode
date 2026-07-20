@@ -57,6 +57,11 @@ class PotMap[K, V](
     }
   }
 
+  /**
+    * Returns the raw value for `key` without triggering a refresh for missing or empty values.
+    */
+  def rawGet(key: K): Option[Pot[V]] = elems.get(key)
+
   override def map(f: (K, Pot[V]) => Pot[V]): PotMap[K, V] = {
     new PotMap(fetcher, elems.map(kv => (kv._1, f(kv._1, kv._2))))
   }
@@ -68,25 +73,24 @@ class PotMap[K, V](
   def -(key: K): PotMap[K, V] = remove(key)
 
   def get(keys: Iterable[K]): Map[K, Pot[V]] = {
-    var toFetch                = List.empty[K]
-    val values: Map[K, Pot[V]] =
-      keys.map { key =>
-        elems.get(key) match {
-          case Some(elem) if elem.state == PotState.PotEmpty =>
-            toFetch ::= key
-            (key, Pending().asInstanceOf[Pot[V]])
-          case Some(elem) =>
-            (key, elem)
-          case None =>
-            toFetch ::= key
-            (key, Pending().asInstanceOf[Pot[V]])
-        }
-      }.toMap
-
+    var toFetch = List.empty[K]
+    val values  = Map.newBuilder[K, Pot[V]]
+    keys.foreach { key =>
+      elems.get(key) match {
+        case Some(elem) if elem.state == PotState.PotEmpty =>
+          toFetch ::= key
+          values += key -> Pending().asInstanceOf[Pot[V]]
+        case Some(elem) =>
+          values += key -> elem
+        case None =>
+          toFetch ::= key
+          values += key -> Pending().asInstanceOf[Pot[V]]
+      }
+    }
     if (toFetch.nonEmpty) {
       refresh(toFetch)
     }
-    values
+    values.result()
   }
 
   def size = elems.size

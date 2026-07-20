@@ -214,7 +214,7 @@ git tag -a v1.3.1 -m "v1.3.1"
 git push origin v1.3.1
 ```
 
-This triggers the [release workflow](.github/workflows/release.yml), which runs `sbt +ci-release`: it builds all
+This triggers the [release workflow](.github/workflows/release.yml), which runs `sbt ci-release`: it builds all
 modules for Scala 2.13 and 3, signs the artifacts with PGP and publishes them to Maven Central via the
 [Sonatype Central Portal](https://central.sonatype.com). No manual staging/release step is needed. Artifacts usually
 show up on Maven Central within 15–30 minutes.

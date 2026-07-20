@@ -67,9 +67,9 @@ trait Effect {
 abstract class EffectBase(val ec: ExecutionContext) extends Effect { self =>
   override def +(that: Effect) = new EffectSet(this, Set(that), ec)
 
-  override def >>(that: Effect) = new EffectSeq(this, List(that), ec)
+  override def >>(that: Effect) = new EffectSeq(this, Vector(that), ec)
 
-  override def <<(that: Effect) = new EffectSeq(that, List(this), ec)
+  override def <<(that: Effect) = new EffectSeq(that, Vector(this), ec)
 
   override def size = 1
 

@@ -29,8 +29,11 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('build.sbt') }}-${{ hashFiles('project/*.scala') }}
           restore-keys: ${{ runner.os }}-sbt-
       - name: Publish
+        # ci-release already cross-publishes internally (it runs +publishSigned);
+        # wrapping it in `+` deploys twice and the second deployment fails with
+        # "component already exists", marking the run red after a successful release
         run: |
-          sbt +ci-release
+          sbt ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
