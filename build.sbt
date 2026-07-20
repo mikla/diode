@@ -168,6 +168,18 @@ lazy val diodeDevtools = crossProject(JSPlatform, JVMPlatform)
   )
   .dependsOn(diodeCore)
 
+// JMH benchmarks (JVM only, not aggregated into the root build or published).
+// Run with: sbt "diodeBench/Jmh/run .*"
+lazy val diodeBench = project
+  .in(file("diode-bench"))
+  .enablePlugins(JmhPlugin)
+  .settings(commonSettings: _*)
+  .settings(
+    name           := "diode-bench",
+    publish / skip := true
+  )
+  .dependsOn(diode.jvm)
+
 lazy val diodeReact: Project = project
   .enablePlugins(ScalaJSPlugin)
   .in(file("diode-react"))
