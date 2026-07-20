@@ -1,7 +1,5 @@
 package diode.data
 
-import java.util
-
 import diode.Implicits.runAfterImpl
 
 import scala.annotation.tailrec
@@ -9,30 +7,17 @@ import scala.annotation.tailrec
 class PotVector[V](
     private val fetcher: Fetch[Int],
     private val length: Int,
-    private val elems: Array[Option[Pot[V]]]
+    private val elems: Vector[Option[Pot[V]]]
 ) extends PotCollection[Int, V] {
 
-  private def enlarge(newSize: Int) = {
-    val newArray = Array.ofDim[Option[Pot[V]]](newSize)
-    // copy old data
-    Array.copy(elems, 0, newArray, 0, elems.length)
-    // clear newly allocated space
-    for (i <- elems.length until newSize)
-      newArray(i) = None
-    newArray
-  }
+  // returns a backing vector that is at least `newSize` long, padding with `None` when needed
+  private def extended(newSize: Int): Vector[Option[Pot[V]]] =
+    if (newSize <= elems.length) elems else elems.padTo(newSize, None)
 
   override def updated(idx: Int, value: Pot[V]): PotVector[V] = {
     if (idx < 0 || idx >= length)
       throw new IndexOutOfBoundsException
-    val newElems = if (idx >= elems.length) {
-      // enlarge the array
-      enlarge(idx + 1)
-    } else {
-      elems
-    }
-    newElems(idx) = Some(value)
-    new PotVector(fetcher, length, newElems)
+    new PotVector(fetcher, length, extended(idx + 1).updated(idx, Some(value)))
   }
 
   override def updated(kvs: Iterable[(Int, Pot[V])]): PotVector[V] = {
@@ -42,32 +27,23 @@ class PotVector[V](
     }
     if (minIdx < 0 || maxIdx >= length)
       throw new IndexOutOfBoundsException
-    val newElems = if (maxIdx >= elems.length) {
-      // enlarge the array
-      enlarge(maxIdx + 1)
-    } else {
-      elems
+    val newElems = kvs.foldLeft(extended(maxIdx + 1)) {
+      case (v, (idx, value)) => v.updated(idx, Some(value))
     }
-    kvs.foreach { case (idx, value) => newElems(idx) = Some(value) }
     new PotVector(fetcher, length, newElems)
   }
 
   override def updated(start: Int, values: Iterable[Pot[V]])(implicit num: Numeric[Int]): PotVector[V] = {
     val end = start + values.size
-    if (start < 0 || end >= length)
+    if (start < 0 || end > length)
       throw new IndexOutOfBoundsException
     if (end <= start)
       return this
 
-    val newElems = if (end >= elems.length) {
-      // enlarge the array
-      enlarge(end + 1)
-    } else {
-      elems
-    }
-    var idx = start
+    var newElems = extended(end)
+    var idx      = start
     values.foreach { value =>
-      newElems(idx) = Some(value)
+      newElems = newElems.updated(idx, Some(value))
       idx += 1
     }
 
@@ -106,8 +82,12 @@ class PotVector[V](
   }
 
   override def remove(idx: Int): PotVector[V] = {
-    elems(idx) = None
-    this
+    if (idx < 0 || idx >= length)
+      throw new IndexOutOfBoundsException
+    if (idx < elems.length)
+      new PotVector(fetcher, length, elems.updated(idx, None))
+    else
+      this
   }
 
   override def refresh(idx: Int): Unit = {
@@ -125,7 +105,7 @@ class PotVector[V](
   }
 
   override def clear: PotVector[V] =
-    new PotVector(fetcher, length, Array.empty[Option[Pot[V]]])
+    new PotVector(fetcher, length, Vector.empty[Option[Pot[V]]])
 
   override def get(idx: Int): Pot[V] = {
     if (idx < 0 || idx >= length)
@@ -138,16 +118,14 @@ class PotVector[V](
     }
   }
 
+  /**
+    * Returns the raw value at `idx` without triggering a refresh for missing values.
+    */
+  def rawGet(idx: Int): Option[Pot[V]] =
+    if (idx >= 0 && idx < elems.length) elems(idx) else None
+
   override def map(f: (Int, Pot[V]) => Pot[V]): PotVector[V] = {
-    val newElems = new Array[Option[Pot[V]]](elems.length)
-    for (idx <- elems.indices) {
-      newElems(idx) = elems(idx) match {
-        case Some(value) =>
-          Some(f(idx, value))
-        case None =>
-          None
-      }
-    }
+    val newElems = Vector.tabulate(elems.length)(idx => elems(idx).map(value => f(idx, value)))
     new PotVector(fetcher, length, newElems)
   }
 
@@ -175,16 +153,16 @@ class PotVector[V](
   }
 
   def resized(newLength: Int) =
-    new PotVector(fetcher, newLength, if (newLength < elems.length) util.Arrays.copyOf(elems, newLength) else elems)
+    new PotVector(fetcher, newLength, if (newLength < elems.length) elems.take(newLength) else elems)
 
   def contains(idx: Int): Boolean = {
     if (idx < 0 || idx >= length)
       throw new IndexOutOfBoundsException
-    elems(idx).isDefined
+    idx < elems.length && elems(idx).isDefined
   }
 }
 
 object PotVector {
   def apply[V](fetcher: Fetch[Int], length: Int, elems: Seq[Pot[V]] = Seq.empty[Pot[V]]) =
-    new PotVector[V](fetcher, length, elems.map(Some(_)).toArray)
+    new PotVector[V](fetcher, length, elems.iterator.map(Some(_)).toVector)
 }

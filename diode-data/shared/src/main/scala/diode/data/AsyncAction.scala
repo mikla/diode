@@ -210,13 +210,8 @@ object AsyncAction {
       import handler._
       // updates/adds only those values whose key is in the `keys` set
       def updateInCollection(f: Pot[V] => Pot[V], default: Pot[V]): PotMap[K, V] = {
-        // update existing values
-        value.map { (k, v) =>
-          if (keys.contains(k))
-            f(v)
-          else
-            v
-        } ++ (keys -- value.keySet).map(k => k -> default) // add new ones
+        // update existing values, add missing ones as `default`
+        value.updated(keys.iterator.map(k => k -> value.rawGet(k).fold(default)(f)).toList)
       }
       action.state match {
         case PotEmpty =>
@@ -251,15 +246,8 @@ object AsyncAction {
       import handler._
       // updates/adds only those values whose index is in the `indices` set
       def updateInCollection(f: Pot[V] => Pot[V], default: Pot[V]): PotVector[V] = {
-        // update existing values
-        value
-          .map { (k, v) =>
-            if (indices.contains(k))
-              f(v)
-            else
-              v
-          }
-          .updated(indices.filterNot(value.contains).map(i => i -> default)) // add new ones
+        // update existing values, add missing ones as `default`
+        value.updated(indices.iterator.map(i => i -> value.rawGet(i).fold(default)(f)).toList)
       }
       action.state match {
         case PotEmpty =>
@@ -301,13 +289,8 @@ object AsyncActionRetriable {
       import handler._
       // updates/adds only those values whose key is in the `keys` set
       def updateInCollection(f: Pot[V] => Pot[V], default: Pot[V]): PotMap[K, V] = {
-        // update existing values
-        value.map { (k, v) =>
-          if (keys.contains(k))
-            f(v)
-          else
-            v
-        } ++ (keys -- value.keySet).map(k => k -> default) // add new ones
+        // update existing values, add missing ones as `default`
+        value.updated(keys.iterator.map(k => k -> value.rawGet(k).fold(default)(f)).toList)
       }
       action.state match {
         case PotEmpty =>
@@ -346,15 +329,8 @@ object AsyncActionRetriable {
       import handler._
       // updates/adds only those values whose index is in the `indices` set
       def updateInCollection(f: Pot[V] => Pot[V], default: Pot[V]): PotVector[V] = {
-        // update existing values
-        value
-          .map { (k, v) =>
-            if (indices.contains(k))
-              f(v)
-            else
-              v
-          }
-          .updated(indices.filterNot(value.contains).map(i => i -> default)) // add new ones
+        // update existing values, add missing ones as `default`
+        value.updated(indices.iterator.map(i => i -> value.rawGet(i).fold(default)(f)).toList)
       }
       action.state match {
         case PotEmpty =>

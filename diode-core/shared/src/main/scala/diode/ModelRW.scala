@@ -101,6 +101,13 @@ trait ModelR[M, S] extends ModelRO[S] {
   def eval(model: M): S
 
   /**
+    * Evaluates the reader against a supplied `model` and compares the result with `previous`, returning the new value if it
+    * has changed. Unlike calling `===` followed by `eval`, this evaluates the reader chain only once.
+    */
+  private[diode] def changedValue(model: M, previous: S): Option[S] =
+    if (this === previous) None else Some(eval(model))
+
+  /**
     * Returns the root model reader of this reader
     */
   def root: ModelR[M, M]
@@ -228,25 +235,42 @@ class ZoomModelR[M, S](val root: ModelR[M, M], get: M => S)(implicit feq: FastEq
   override def eval(model: M): S = get(model)
 
   override def ===(that: S): Boolean = feq.eqv(value, that)
+
+  override private[diode] def changedValue(model: M, previous: S): Option[S] = {
+    val newValue = eval(model)
+    if (feq.eqv(newValue, previous)) None else Some(newValue)
+  }
 }
 
-trait MappedModelR[F[_], M, B] { self: ModelR[M, F[B]] =>
+trait MappedModelR[F[_], M, A, B] { self: ModelR[M, F[B]] =>
   protected def monad: Monad[F]
   protected def feq: FastEq[? >: B]
-  protected def mapValue: F[B]
+  protected def getInput: M => F[A]
+  protected def mapInput(input: F[A]): F[B]
 
-  private var memoized = mapValue
+  private var lastInput = getInput(self.root.value)
+  private var memoized  = mapInput(lastInput)
 
   override def eval(model: M): F[B] = {
-    val v = mapValue
-    // update memoized value only when the value inside the monad changes
-    if (!monad.isEqual(v, memoized)(feq.eqv)) {
-      memoized = v
+    val input = getInput(model)
+    // recompute only when the input has changed
+    if (input.asInstanceOf[AnyRef] ne lastInput.asInstanceOf[AnyRef]) {
+      lastInput = input
+      val v = mapInput(input)
+      // update memoized value only when the value inside the monad changes
+      if (!monad.isEqual(v, memoized)(feq.eqv)) {
+        memoized = v
+      }
     }
     memoized
   }
 
   override def ===(that: F[B]): Boolean = monad.isEqual(value, that)(feq.eqv)
+
+  override private[diode] def changedValue(model: M, previous: F[B]): Option[F[B]] = {
+    val newValue = eval(model)
+    if (monad.isEqual(newValue, previous)(feq.eqv)) None else Some(newValue)
+  }
 }
 
 /**
@@ -256,9 +280,11 @@ class MapModelR[F[_], M, A, B](val root: ModelR[M, M], get: M => F[A], f: A => B
     val monad: Monad[F],
     val feq: FastEq[? >: B]
 ) extends BaseModelR[M, F[B]]
-    with MappedModelR[F, M, B] {
+    with MappedModelR[F, M, A, B] {
 
-  override protected def mapValue: F[B] = monad.map(get(root.value))(f)
+  override protected def getInput: M => F[A] = get
+
+  override protected def mapInput(input: F[A]): F[B] = monad.map(input)(f)
 }
 
 /**
@@ -268,9 +294,11 @@ class FlatMapModelR[F[_], M, A, B](val root: ModelR[M, M], get: M => F[A], f: A 
     val monad: Monad[F],
     val feq: FastEq[? >: B]
 ) extends BaseModelR[M, F[B]]
-    with MappedModelR[F, M, B] {
+    with MappedModelR[F, M, A, B] {
 
-  override protected def mapValue: F[B] = monad.flatMap(get(root.value))(f)
+  override protected def getInput: M => F[A] = get
+
+  override protected def mapInput(input: F[A]): F[B] = monad.flatMap(input)(f)
 }
 
 /**
@@ -298,6 +326,11 @@ class ZipModelR[M, S, SS](val root: ModelR[M, M], get1: M => S, get2: M => SS)(i
   override def ===(that: (S, SS)): Boolean = {
     // using fast eq is required to support zip in subscribe
     feqS.eqv(get1(root.value), that._1) && feqSS.eqv(get2(root.value), that._2)
+  }
+
+  override private[diode] def changedValue(model: M, previous: (S, SS)): Option[(S, SS)] = {
+    val newValue = eval(model)
+    if (feqS.eqv(newValue._1, previous._1) && feqSS.eqv(newValue._2, previous._2)) None else Some(newValue)
   }
 }
 

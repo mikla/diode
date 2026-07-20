@@ -114,12 +114,8 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
   type HandlerFunction = (M, Any) => Option[ActionResult[M]]
 
   private case class Subscription[T](listener: ModelRO[T] => Unit, cursor: ModelR[M, T], lastValue: T) {
-    def changed: Option[Subscription[T]] = {
-      if (cursor === lastValue)
-        None
-      else
-        Some(copy(lastValue = cursor.eval(model)))
-    }
+    def changed: Option[Subscription[T]] =
+      cursor.changedValue(model, lastValue).map(newValue => copy(lastValue = newValue))
 
     def call(): Unit = listener(cursor)
   }
@@ -231,7 +227,7 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
     */
   def removeProcessor(processor: ActionProcessor[M]): Unit = {
     this.synchronized {
-      processors = processors.filterNot(_ == processor)
+      processors = processors.filterNot(_ eq processor)
       processChain = buildProcessChain
     }
   }
@@ -358,30 +354,32 @@ trait Circuit[M <: AnyRef] extends Dispatcher with ZoomTo[M, M] {
           val silent   = dispatchBase(action)
           if (oldModel ne model) {
             // walk through all listeners and update subscriptions when model has changed
-            val updated = listeners.foldLeft(listeners) {
-              case (l, (key, sub)) =>
+            var changes = List.empty[(Int, Subscription[?])]
+            listeners.foreach {
+              case (key, sub) =>
                 if (listeners.isDefinedAt(key)) {
                   // Listener still exists
                   sub.changed match {
                     case Some(newSub) =>
-                      // value at the cursor has changed, call listener and update subscription
+                      // value at the cursor has changed, call listener and remember the updated subscription
                       if (!silent) sub.call()
-                      l.updated(key, newSub)
-                    case None => l // nothing interesting happened
+                      changes ::= key -> newSub
+                    case None => // nothing interesting happened
                   }
-                } else {
-                  l // Listener was removed since we started
                 }
+              // else: Listener was removed since we started
             }
 
             // Listeners may have changed during processing (subscribe or unsubscribe)
             // so only update the listeners that are still there, and leave any new listeners that may be there now.
-            listeners = updated.foldLeft(listeners) {
-              case (l, (key, sub)) =>
-                if (l.isDefinedAt(key))
-                  l.updated(key, sub) // Listener still exists for this key
-                else
-                  l // Listener was removed for this key, skip it
+            if (changes.nonEmpty) {
+              listeners = changes.foldLeft(listeners) {
+                case (l, (key, sub)) =>
+                  if (l.isDefinedAt(key))
+                    l.updated(key, sub) // Listener still exists for this key
+                  else
+                    l // Listener was removed for this key, skip it
+              }
             }
           }
         } catch {

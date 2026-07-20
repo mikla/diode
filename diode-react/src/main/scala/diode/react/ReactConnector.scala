@@ -39,6 +39,13 @@ case class ModelProxy[S](modelReader: ModelRO[S], theDispatch: Any => Unit, conn
 
 trait ReactConnector[M <: AnyRef] { circuit: Circuit[M] =>
 
+  // a single stable dispatch function, so that ModelProxy instances compare equal across renders
+  // and don't defeat React reusability checks in wrapped components
+  private val proxyDispatch: Any => Unit = {
+    import diode.AnyAction.aType
+    action => circuit.dispatch(action)
+  }
+
   /**
     * Wraps a React component by providing it an instance of ModelProxy for easy access to the model and dispatcher.
     *
@@ -66,9 +73,8 @@ trait ReactConnector[M <: AnyRef] { circuit: Circuit[M] =>
     *   The component returned by `compB`
     */
   def wrap[S <: AnyRef, C](modelReader: ModelRO[S])(compB: ModelProxy[S] => C)(implicit ev: C => VdomElement): C = {
-    implicit object aType extends ActionType[Any]
     val _ = ev
-    compB(ModelProxy(modelReader, action => circuit.dispatch(action), ReactConnector.this))
+    compB(ModelProxy(modelReader, proxyDispatch, ReactConnector.this))
   }
 
   /**
@@ -119,7 +125,11 @@ trait ReactConnector[M <: AnyRef] { circuit: Circuit[M] =>
         // subscribe to model changes
         Callback {
           unsubscribe = Some(circuit.subscribe(modelReader.asInstanceOf[ModelR[M, S]])(changeHandler))
-        } >> t.setState(modelReader())
+        } >> t.state.flatMap { state =>
+          // refresh the state only if the model changed after the initial state was captured,
+          // to avoid an immediate second render on mount
+          Callback.when(modelReader =!= state)(t.setState(modelReader()))
+        }
       }
 
       def willUnmount = Callback {
